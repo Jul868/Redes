@@ -2,7 +2,7 @@ import socket
 import time
 
 # Configuración del microcontrolador (IP y puerto)
-microcontrolador_ip = '192.168.43.195'  # Cambia esto a la IP del ESP32
+microcontrolador_ip = '192.168.53.184'  # Cambia esto a la IP del ESP32
 microcontrolador_puerto = 502  # Puerto en el que el ESP32 está escuchando
 
 # Crear un socket TCP/IP
@@ -32,7 +32,7 @@ def enviar_trama_single_register(valor, registro):
     TRANSACTION_ID += 1
     CODE = "{:04x}".format(TRANSACTION_ID) + PROTOCOL_ID
     mensaje = CODE + "0006" + UNIT_ID + "06" + "{:04X}".format(int(registro)) + "{:04X}".format(int(valor))
-    cliente.sendall(bytes.fromhex(mensaje))
+    cliente.sendall(mensaje.encode())
     print(mensaje)
 
 # Función para enviar trama Modbus "Write Multiple Registers"

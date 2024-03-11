@@ -22,7 +22,7 @@ void loop() {
   Wire.endTransmission();
   Wire.requestFrom(SI7021_ADDRESS, 2);
   if (Wire.available()) {
-    int humidity = Wire.read() << 8 | Wire.read();
+    int humidity = Wire.read() << 8 | Wire.read(); //wire.read() read the data recieved from ESP32 pin 21, where is 
     Serial.print("Humidity: ");
     Serial.print(humidity * 125 / 65536.0 - 6);
     Serial.println("%");

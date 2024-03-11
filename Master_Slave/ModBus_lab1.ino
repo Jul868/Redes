@@ -113,15 +113,7 @@ void loop() {
         // Leer la trama Modbus recibida
         trama = cliente.readStringUntil('\n');
         Serial.println("Trama Modbus recibida: " + trama);
-
-        // Convertir la trama a hexadecimal
-        String hexa_trama = "";
-        for (int i = 0; i < trama.length(); i++) {
-          hexa_trama += String(trama[i], HEX);
-        }
-        Serial.println("Trama Modbus en hexadecimal: " + hexa_trama);
-
-        TRANSACTION_ID++;
+        TRANSACTION_ID ++;
         sprintf(hexa_transaction, "%04X", TRANSACTION_ID);
       }
 
@@ -239,25 +231,28 @@ void loop() {
             cliente.println(respuesta);
             Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-          else ifled ='5'){
+          else if(led = '5'){
             digitalWrite(ledPin, LOW);
             digitalWrite(ledPin_2, LOW);
             digitalWrite(ledPin_3, LOW);
 
-            if (accion == 
+            if (accion == 1){
+
               interval1 = 500;
               freq = 1;
             }
-            else ifaccion == 2
+            else if(accion == 2){
               interval1 = 1000;
               freq = 2;
             }
-            else ifaccion == 3
+            else if(accion == 3){
               interval1 = 1500;
               freq = 3;
             }
+            respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0005") +  hexa_freq;
+            cliente.println(respuesta);
+            Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-
 
         }
       }
@@ -267,14 +262,12 @@ void loop() {
         Serial.print("Contador 1: ");
         Serial.println(contador);
 
-
       }
       if (digitalRead(PULSADOR_2) == LOW) {
         contador_2++;
         Serial.print("Contador 2: ");
         Serial.println(contador_2);
       }
-
 
     }
 
@@ -283,11 +276,7 @@ void loop() {
     Serial.println("Cliente desconectado");
 
 
-
-
   }
-
-
 
 
 }
