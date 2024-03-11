@@ -32,7 +32,7 @@ def enviar_trama_single_register(valor, registro):
     TRANSACTION_ID += 1
     CODE = "{:04x}".format(TRANSACTION_ID) + PROTOCOL_ID
     mensaje = CODE + "0006" + UNIT_ID + "06" + "{:04X}".format(int(registro)) + "{:04X}".format(int(valor))
-    cliente.sendall(mensaje.encode())
+    cliente.sendall(bytes.fromhex(mensaje))
     print(mensaje)
 
 # Función para enviar trama Modbus "Write Multiple Registers"

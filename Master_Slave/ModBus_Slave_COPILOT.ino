@@ -81,17 +81,12 @@ void setup() {
   pinMode(PULSADOR_1, INPUT_PULLUP);
   pinMode(PULSADOR_2, INPUT_PULLUP);
 
-
-
   digitalWrite(ledPin, LOW);
   digitalWrite(ledPin_2, LOW);
   digitalWrite(ledPin_3, LOW);
-
 }
 
 void loop() {
-
-
   cliente = servidor.available();
   if (cliente) {
     Serial.println("Cliente conectado");
@@ -125,12 +120,8 @@ void loop() {
         sprintf(hexa_transaction, "%04X", TRANSACTION_ID);
       }
 
-
       // Interpretar la trama Modbus
       if (trama.length() >= 8) {
-
-
-
         // Leer Holding Register (código 03)
         if (codigo == '3') {
           // Construir la respuesta con los valores de los registros solicitados
@@ -148,83 +139,39 @@ void loop() {
           if (led == '0') {
             if (accion == '1') {
               led1_encendido = true;
-              //digitalWrite(ledPin,HIGH);
-              if (currentMillis - previousMillis1 >= interval1) {
-                previousMillis1 = currentMillis;
-
-                if (ledState1 == LOW) {
-                  ledState1 = HIGH;
-                } else {
-                  ledState1 = LOW;
-                }
-                digitalWrite(ledPin, ledState1);  // Establece el estado del LED
-              }
               respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0000") +  hexa_led1;
               cliente.println(respuesta);
               Serial.println("Respuesta Modbus enviada: " + respuesta);
             }
-
             else if (accion == '0') {
               led1_encendido = false;
               digitalWrite(ledPin, LOW);
             }
-
-
-
           }
-
           else if (led == '1') {
             if (accion == '1') {
               led2_encendido = true;
-              //digitalWrite(ledPin_2, HIGH);
-              if (currentMillis2 - previousMillis2 >= interval1) {
-                previousMillis2 = currentMillis2;
-
-                if (ledState2 == LOW) {
-                  ledState2 = HIGH;
-                } else {
-                  ledState2 = LOW;
-                }
-                digitalWrite(ledPin_2, ledState2);  // Establece el estado del LED
-              }
-
+              respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0001") +  hexa_led2;
+              cliente.println(respuesta);
+              Serial.println("Respuesta Modbus enviada: " + respuesta);
             }
             else if (accion == '0') {
               led2_encendido = false;
               digitalWrite(ledPin_2, LOW);
             }
-
-            respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0001") +  hexa_led2;
-            cliente.println(respuesta);
-            Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-
           else if (led == '2') {
             if (accion == '1') {
               led3_encendido = true;
-              //digitalWrite(ledPin_3, HIGH);
-              if (currentMillis3 - previousMillis3 >= interval1) {
-                previousMillis3 = currentMillis3;
-
-                if (ledState3 == LOW) {
-                  ledState3 = HIGH;
-                } else {
-                  ledState3 = LOW;
-                }
-                digitalWrite(ledPin_3, ledState3);  // Establece el estado del LED
-              }
-
+              respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0002") +  hexa_led3;
+              cliente.println(respuesta);
+              Serial.println("Respuesta Modbus enviada: " + respuesta);
             }
             else if (accion == '0') {
               led3_encendido = false;
               digitalWrite(ledPin_3, LOW);
             }
-
-            respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0002") +  hexa_led3;
-            cliente.println(respuesta);
-            Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-
           else if (led == '3') {
             contador = atoi(&accion);
             sprintf(hexa_contador1, "%04X", char(contador));
@@ -239,26 +186,44 @@ void loop() {
             cliente.println(respuesta);
             Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-          else ifled ='5'){
+          else if (led == '5') {
             digitalWrite(ledPin, LOW);
             digitalWrite(ledPin_2, LOW);
             digitalWrite(ledPin_3, LOW);
 
-            if (accion == 
+            if (accion == '1') {
               interval1 = 500;
               freq = 1;
             }
-            else ifaccion == 2
+            else if (accion == '2') {
               interval1 = 1000;
               freq = 2;
             }
-            else ifaccion == 3
+            else if (accion == '3') {
               interval1 = 1500;
               freq = 3;
             }
+
+            if (led1_encendido) {
+              previousMillis1 = currentMillis;
+              ledState1 = LOW;
+              digitalWrite(ledPin, ledState1);
+            }
+            if (led2_encendido) {
+              previousMillis2 = currentMillis2;
+              ledState2 = LOW;
+              digitalWrite(ledPin_2, ledState2);
+            }
+            if (led3_encendido) {
+              previousMillis3 = currentMillis3;
+              ledState3 = LOW;
+              digitalWrite(ledPin_3, ledState3);
+            }
+
+            respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0005") +  hexa_freq;
+            cliente.println(respuesta);
+            Serial.println("Respuesta Modbus enviada: " + respuesta);
           }
-
-
         }
       }
 
@@ -266,28 +231,16 @@ void loop() {
         contador++;
         Serial.print("Contador 1: ");
         Serial.println(contador);
-
-
       }
       if (digitalRead(PULSADOR_2) == LOW) {
         contador_2++;
         Serial.print("Contador 2: ");
         Serial.println(contador_2);
       }
-
-
     }
 
     // Cerrar la conexión con el cliente
     cliente.stop();
     Serial.println("Cliente desconectado");
-
-
-
-
   }
-
-
-
-
 }
