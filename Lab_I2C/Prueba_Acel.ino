@@ -53,7 +53,7 @@ int16_t readRegister16(uint8_t reg) {
 config_Sensor(){
     Wire.beginTransmission(MPU9250_ADDRESS);
     Wire.write(0x6B);
-    Wire.write(
+    Wire.write()
     Wire.endTransmission();
 
 }

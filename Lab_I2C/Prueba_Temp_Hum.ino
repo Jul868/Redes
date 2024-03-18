@@ -12,6 +12,7 @@ void loop() {
   float temperature = readTemperature();
   float humidity = readHumidity();
 
+
   // Mostrar la temperatura en el monitor serial
   Serial.print("Temperatura: ");
   Serial.print(temperature);
@@ -19,6 +20,7 @@ void loop() {
   Serial.print("Humedad: ");
   Serial.print(humidity);
   Serial.println("");
+
 
   delay(1000);  // Esperar 1 segundo antes de la próxima lectura
 }
