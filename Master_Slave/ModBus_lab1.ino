@@ -4,17 +4,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Wire.h>
+#include <SPI.h>
+ 
+// Pines para la comunicación SPI con MPU-9250
+#define PIN_CS   5  // Pin de selección del chip para MPU-9250
+#define PIN_SCK  18 // Pin de reloj serial
+#define PIN_MISO 19 // Pin de entrada de datos del maestro
+#define PIN_MOSI 23 // Pin de salida de datos del maestro
+ 
+// Direcciones de registro del MPU-9250
+#define GYRO_XOUT_H   0x43 // Primer registro de datos del giroscopio
+#define ACCEL_XOUT_H  0x3B // Primer registro de datos del acelerómetro
+#define PWR_MGMT_1    0x6B // Registro de administración de energía
+#define WHO_AM_I      0x75 // Registro que devuelve la identificación del dispositivo (debe ser 0x71)
+ 
 
-//Definiciones giroscopio
-#define MPU9250_ADDRESS 0x68 // Dirección por defecto del MPU-9250 en el bus I2C
-#define PWR_MGMT_1      0x6B // Registro de gestión de energía
-#define GYRO_CONFIG     0x1B // Configuración del giroscopio
-#define ACCEL_CONFIG    0x1C // Configuración del acelerómetro
-#define CONFIG          0x1A // Configuración general
-#define MPU9250_ADDRESS     0x68 // Dirección I2C del MPU-9250
-#define ACCEL_XOUT_H        0x3B // Dirección del primer registro de datos del acelerómetro
-#define GYRO_XOUT_H         0x43 // Dirección del primer registro de datos del giroscopio
-#define RESOLUTION_REGISTER 0xE6 // Dirección del registro de resolución del Si7021
+//Definiciones giroscopio I2C
+//#define MPU9250_ADDRESS 0x68 // Dirección por defecto del MPU-9250 en el bus I2C
+//#define PWR_MGMT_1      0x6B // Registro de gestión de energía
+//#define GYRO_CONFIG     0x1B // Configuración del giroscopio
+//#define ACCEL_CONFIG    0x1C // Configuración del acelerómetro
+//#define CONFIG          0x1A // Configuración general
+//#define MPU9250_ADDRESS     0x68 // Dirección I2C del MPU-9250
+//#define ACCEL_XOUT_H        0x3B // Dirección del primer registro de datos del acelerómetro
+//#define GYRO_XOUT_H         0x43 // Dirección del primer registro de datos del giroscopio
+//#define RESOLUTION_REGISTER 0xE6 // Dirección del registro de resolución del Si7021
 
 
 // Dirección I2C del Si7021
@@ -79,6 +93,7 @@ int encendido = 0;
 int SI7021_Res = 0;
 int MPU9250_Res = 0;
 int16_t accX, accY, accZ, gyroX, gyroY, gyroZ;
+accX, accY, accZ, gyroX, gyroY, gyroZ = 0;
 float temperature, humidity;
 
 WiFiServer servidor(502);  // Puerto en el que el ESP32 está escuchando
@@ -89,6 +104,12 @@ WiFiClient cliente;
 void setup() {
   Serial.begin(115200);
   WiFi.begin("Motorola", "Qwe12345");
+  pinMode(PIN_CS, OUTPUT); // Configura el pin CS como salida
+
+  // Inicializa el bus SPI
+  SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI, PIN_CS);
+  // Configura el MPU-9250 para despertar y establecer el rango del giroscopio y acelerómetro
+  writeRegister(PWR_MGMT_1, 0x01); // Establece el reloj al oscilador PLL
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("Conectando a WiFi...");
@@ -112,8 +133,8 @@ void setup() {
   digitalWrite(ledPin_2, LOW);
 
   Wire.begin();
-  setupMPU9250(0x00, 0x00);// Configura el MPU-9250 para usar el acelerómetro y el giroscopio
-  Serial.println("MPU-9250 inicializado para acelerómetro y giroscopio.");
+  //setupMPU9250(0x00, 0x00);// Configura el MPU-9250 para usar el acelerómetro y el giroscopio
+  //Serial.println("MPU-9250 inicializado para acelerómetro y giroscopio.");
   Serial.print("Probe SI7021: ");
   delay(1000);
   initializeSi7021();
@@ -123,6 +144,7 @@ void setup() {
 }
 
 void loop() {
+
   cliente = servidor.available();
   if (cliente) {
     Serial.println("Cliente conectado");
@@ -179,8 +201,9 @@ void handleModbusRequest(const String& trama) {
                 if(action == '1'){
                   temperature = readTemperature();
                   humidity = readHumidity();
-                  readGyroscope(gyroX, gyroY, gyroZ); 
-                  readAccelerometer(accX, accY, accZ);
+                  // Lee los datos del acelerómetro y giroscopio
+                  readMPU9250Data(ACCEL_XOUT_H, accX, accY, accZ);
+                  readMPU9250Data(GYRO_XOUT_H, gyroX, gyroY, gyroZ);
                   encendido = 1;
                   Serial.print("Temperatura: ");
                   Serial.print(temperature);
@@ -261,7 +284,8 @@ void handleModbusRequest(const String& trama) {
                 }
                 actualizarVariablesEstado();
                 respuesta = hexa_transaction + PROTOCOL_ID + TAM_1 + UNIT_ID + x + codigo + String("0005") +  hexa_SI7021_Res;
-            } else if(ledCode == '8'){ //lets configure the MPU sensor resolution
+            } else if(ledCode == '8'){ //lets configure the MPU sensor resolution in SPI
+                if(action ==)
                 if (action == '0') {
                     setupMPU9250(0x00, 0x00); // Configura el rango del giroscopio a ±250 grados/seg, y el rango del acelerómetro a ±2g
                     MPU9250_Res = 0;
@@ -306,52 +330,78 @@ void actualizarLEDs() {
     }
 }
 
-void setupMPU9250(byte gScale, byte aScale) {
-  Wire.begin(); // Inicializa la comunicación I2C
-  Wire.beginTransmission(MPU9250_ADDRESS); // Comienza transmisión al dispositivo
-  Wire.write(PWR_MGMT_1); // Selecciona el registro PWR_MGMT_1
-  Wire.write(0x00); // Escribe 0x00 para despertar el dispositivo
-  Wire.endTransmission(true);
+void writeRegister(uint8_t registerAddress, uint8_t data) {
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(PIN_CS, LOW);
+  SPI.transfer(registerAddress);
+  SPI.transfer(data);
+  digitalWrite(PIN_CS, HIGH);
+  SPI.endTransaction();
+}
  
-  // Configura el rango del giroscopio a ±250 grados/seg
-  Wire.beginTransmission(MPU9250_ADDRESS);
-  Wire.write(GYRO_CONFIG);
-  Wire.write(gScale); // Configura el GYRO_CONFIG a 0x00
-  Wire.endTransmission(true);
+void readMPU9250Data(uint8_t registerAddress, int16_t &dataX, int16_t &dataY, int16_t &dataZ) {
+  uint8_t rawData[6]; // x/y/z gyro register data stored here
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(PIN_CS, LOW);
+  SPI.transfer(registerAddress | 0x80); // Specify the starting register address
+  for (int i = 0; i < 6; ++i) {
+    rawData[i] = SPI.transfer(0x00); // Read the data
+  }
+  digitalWrite(PIN_CS, HIGH);
+  SPI.endTransaction();
  
-  // Configura el rango del acelerómetro a ±2g
-  Wire.beginTransmission(MPU9250_ADDRESS);
-  Wire.write(ACCEL_CONFIG);
-  Wire.write(aScale); // Configura el ACCEL_CONFIG a 0x00
-  Wire.endTransmission(true);
- 
-  // Configura el filtro pasa-bajas y la tasa de muestreo
-  Wire.beginTransmission(MPU9250_ADDRESS);
-  Wire.write(CONFIG);
-  Wire.write(0x01); // Configura el CONFIG a 0x01 para usar el filtro pasa-bajas
-  Wire.endTransmission(true);
+  // Convertir los datos en bruto a valores de 16 bits
+  dataX = ((int16_t)rawData[0] << 8) | rawData[1];
+  dataY = ((int16_t)rawData[2] << 8) | rawData[3];
+  dataZ = ((int16_t)rawData[4] << 8) | rawData[5];
 }
 
-void readGyroscope(int16_t &gyroX, int16_t &gyroY, int16_t &gyroZ) {
-  Wire.beginTransmission(MPU9250_ADDRESS);
-  Wire.write(GYRO_XOUT_H); // Establece el registro desde el cual empezar la lectura
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU9250_ADDRESS, 6, true); // Solicita los 6 bytes del giroscopio
-  gyroX = Wire.read() << 8 | Wire.read(); // Combina los bytes
-  gyroY = Wire.read() << 8 | Wire.read(); // Combina los bytes
-  gyroZ = Wire.read() << 8 | Wire.read(); // Combina los bytes
-}
+// void setupMPU9250(byte gScale, byte aScale) {
+//   Wire.begin(); // Inicializa la comunicación I2C
+//   Wire.beginTransmission(MPU9250_ADDRESS); // Comienza transmisión al dispositivo
+//   Wire.write(PWR_MGMT_1); // Selecciona el registro PWR_MGMT_1
+//   Wire.write(0x00); // Escribe 0x00 para despertar el dispositivo
+//   Wire.endTransmission(true);
+ 
+//   // Configura el rango del giroscopio a ±250 grados/seg
+//   Wire.beginTransmission(MPU9250_ADDRESS);
+//   Wire.write(GYRO_CONFIG);
+//   Wire.write(gScale); // Configura el GYRO_CONFIG a 0x00
+//   Wire.endTransmission(true);
+ 
+//   // Configura el rango del acelerómetro a ±2g
+//   Wire.beginTransmission(MPU9250_ADDRESS);
+//   Wire.write(ACCEL_CONFIG);
+//   Wire.write(aScale); // Configura el ACCEL_CONFIG a 0x00
+//   Wire.endTransmission(true);
+ 
+//   // Configura el filtro pasa-bajas y la tasa de muestreo
+//   Wire.beginTransmission(MPU9250_ADDRESS);
+//   Wire.write(CONFIG);
+//   Wire.write(0x01); // Configura el CONFIG a 0x01 para usar el filtro pasa-bajas
+//   Wire.endTransmission(true);
+// }
+
+// void readGyroscope(int16_t &gyroX, int16_t &gyroY, int16_t &gyroZ) {
+//   Wire.beginTransmission(MPU9250_ADDRESS);
+//   Wire.write(GYRO_XOUT_H); // Establece el registro desde el cual empezar la lectura
+//   Wire.endTransmission(false);
+//   Wire.requestFrom(MPU9250_ADDRESS, 6, true); // Solicita los 6 bytes del giroscopio
+//   gyroX = Wire.read() << 8 | Wire.read(); // Combina los bytes
+//   gyroY = Wire.read() << 8 | Wire.read(); // Combina los bytes
+//   gyroZ = Wire.read() << 8 | Wire.read(); // Combina los bytes
+// }
  
 //Funcion de leer acelerometro
-void readAccelerometer(int16_t &accX, int16_t &accY, int16_t &accZ) {
-  Wire.beginTransmission(MPU9250_ADDRESS);
-  Wire.write(ACCEL_XOUT_H); // Establece el registro desde el cual empezar la lectura
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU9250_ADDRESS, 6, true); // Solicita los 6 bytes del acelerómetro
-  accX = Wire.read() << 8 | Wire.read(); // Combina los bytes
-  accY = Wire.read() << 8 | Wire.read(); // Combina los bytes
-  accZ = Wire.read() << 8 | Wire.read(); // Combina los bytes
-}
+// void readAccelerometer(int16_t &accX, int16_t &accY, int16_t &accZ) {
+//   Wire.beginTransmission(MPU9250_ADDRESS);
+//   Wire.write(ACCEL_XOUT_H); // Establece el registro desde el cual empezar la lectura
+//   Wire.endTransmission(false);
+//   Wire.requestFrom(MPU9250_ADDRESS, 6, true); // Solicita los 6 bytes del acelerómetro
+//   accX = Wire.read() << 8 | Wire.read(); // Combina los bytes
+//   accY = Wire.read() << 8 | Wire.read(); // Combina los bytes
+//   accZ = Wire.read() << 8 | Wire.read(); // Combina los bytes
+// }
 
 void actualizarVariablesEstado() {
     sprintf(hexa_encendido, "%04X", encendido);
