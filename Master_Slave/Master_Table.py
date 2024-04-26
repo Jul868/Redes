@@ -3,12 +3,12 @@ import time
 from prettytable import PrettyTable
 
 # Configuración del microcontrolador (IP y puerto)
-microcontrolador_ip = '192.168.0.103'  # Cambia esto a la IP del ESP32
+microcontrolador_ip = '192.168.121.184'  # Cambia esto a la IP del ESP32
 microcontrolador_puerto = 502  # Puerto en el que el ESP32 está escuchando
 
 # Crear un socket TCP/IP
 cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-cliente.settimeout(5)
+cliente.settimeout(3)
 
 
 # Conectar el socket al servidor
@@ -30,7 +30,7 @@ def enviar_trama(funcion):
     cliente.sendall(mensaje.encode())
     print(mensaje)
     if bandera == 1:
-        print("hola")
+        #print("hola")
         recibir_respuesta()
         bandera = 0
 
