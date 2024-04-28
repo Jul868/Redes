@@ -3,7 +3,7 @@ import time
 from prettytable import PrettyTable
 
 # Configuración del microcontrolador (IP y puerto)
-microcontrolador_ip = '192.168.121.184'  # Cambia esto a la IP del ESP32
+microcontrolador_ip = '192.168.48.184'  # Cambia esto a la IP del ESP32
 microcontrolador_puerto = 502  # Puerto en el que el ESP32 está escuchando
 
 # Crear un socket TCP/IP

@@ -48,6 +48,7 @@ String respuesta = "0";
 char led = '0';
 char accion = '0';
 
+bool automatico = false;
 bool led1_encendido = false;
 bool led2_encendido = false;
 unsigned long previousMillis1 = 0;
@@ -167,6 +168,11 @@ void loop() {
       }
       actualizarLEDs();
       actualizarVariablesEstado();
+      if (automatico){
+        temperature= readTemperature();
+        humidity = readHumidity();
+        delay(1000);
+      }
     }
 
     // Cerrar la conexión con el cliente
@@ -229,6 +235,8 @@ void handleModbusRequest(const String &trama) {
           accX, accY, accZ = 0;
           gyroX, gyroY, gyroZ = 0;
           encendido = 0;
+        }else if (action == '2') {
+          automatico = true;
         }
 
         actualizarVariablesEstado();
