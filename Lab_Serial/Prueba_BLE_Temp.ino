@@ -5,7 +5,7 @@
 
 #define SI7021_ADDRESS 0x40  // Dirección I2C del sensor Si7021
 
-BLEServer* pServer = nullptr;
+BLEServer* pServer = nullptr; 
 BLECharacteristic* pTemperatureCharacteristic = nullptr;
 BLECharacteristic* pHumidityCharacteristic = nullptr;
 BLECharacteristic* pLedStateCharacteristic = nullptr; // Característica para el estado del LED
