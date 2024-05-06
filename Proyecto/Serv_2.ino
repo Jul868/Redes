@@ -1,8 +1,3 @@
-/*
-  Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleNotify.cpp
-  Ported to Arduino ESP32 by Evandro Copercini
-  updated by chegewara and MoThunderz
-*/
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -12,6 +7,7 @@
 BLEServer* pServer = NULL;                        // Pointer to the server
 BLECharacteristic* pCharacteristic_1 = NULL;      // Pointer to Characteristic 1
 BLECharacteristic* pCharacteristic_2 = NULL;      // Pointer to Characteristic 2
+BLECharacteristic* pCharacteristic_3 = NULL;
 
 // Some variables to keep track on device connected
 bool deviceConnected = false;
@@ -28,6 +24,7 @@ uint32_t value = 0;
 #define SERVICE_UUID          "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID_1 "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHARACTERISTIC_UUID_2 "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e"
+#define CHARACTERISTIC_UUID_3 "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87f"
 
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks: public BLEServerCallbacks {
@@ -56,15 +53,21 @@ void setup() {
   // Create a BLE Characteristic
   pCharacteristic_1 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_1,
+                      BLECharacteristic::PROPERTY_READ   |                      
                       BLECharacteristic::PROPERTY_NOTIFY
                     );                   
 
   pCharacteristic_2 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID_2,
-                      BLECharacteristic::PROPERTY_READ   |
-                      BLECharacteristic::PROPERTY_WRITE  |                      
+                      BLECharacteristic::PROPERTY_READ   |                      
                       BLECharacteristic::PROPERTY_NOTIFY
-                    );  
+                    );
+
+  pCharacteristic_3 = pService->createCharacteristic(
+                    CHARACTERISTIC_UUID_3,
+                    BLECharacteristic::PROPERTY_READ   |                      
+                    BLECharacteristic::PROPERTY_NOTIFY
+                  );   
 
   // Start the service
   pService->start();
@@ -81,17 +84,20 @@ void setup() {
 void loop() {
     // notify changed value
     if (deviceConnected) {
-      // pCharacteristic_1 is an integer that is increased with every second
-      // in the code below we send the value over to the client and increase the integer counter
-      pCharacteristic_1->setValue(value);
-      pCharacteristic_1->notify();
-      value++;
-
 
       // Here the value is written to the Client using setValue();
-      String txValue = "String with random value from Server: " + String(Latitude);
-      pCharacteristic_2->setValue(txValue.c_str());
-      Serial.println("Characteristic 2 (setValue): " + txValue);
+      String txValue =  String(Latitude);
+      pCharacteristic_1->setValue(txValue.c_str());
+      Serial.println("Latitude (setValue): " + txValue);
+
+      // Here the value is written to the Client using setValue();
+      String txValue2 = String(Altitude);
+      pCharacteristic_2->setValue(txValue2.c_str());
+      Serial.println("Altitude (setValue): " + txValue2);
+
+      String txValue3 = String(Longitude);
+      pCharacteristic_3->setValue(txValue3.c_str());
+      Serial.println("Longitude (setValue): " + txValue3);
 
       // In this example "delay" is used to delay with one second. This is of course a very basic 
       // implementation to keep things simple. I recommend to use millis() for any production code

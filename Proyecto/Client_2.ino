@@ -1,17 +1,20 @@
-/**
- * A BLE client example that is rich in capabilities.
- * There is a lot new capabilities implemented.
- * author unknown
- * updated by chegewara and MoThunderz
- */
-
+#include <Arduino.h>
 #include "BLEDevice.h"
+#include <wire.h>
 //#include "BLEScan.h"
+
+//Pines pantalla LCD1602 I2C
+
+#define LCD_ADDRESS 0x27 // Asegúrate de usar la dirección correcta
+#define BACKLIGHT 0x08
+#define En 0x04  // Enable bit
+#define Rs 0x01  // Register select bit
 
 // Define UUIDs:
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
 static BLEUUID    charUUID_1("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 static BLEUUID    charUUID_2("1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e");
+static BLEUUID    charUUID_3("1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87f");
 
 // Some variables to keep track on device connected
 static boolean doConnect = false;
@@ -24,25 +27,7 @@ static boolean doScan = false;
 static BLEAdvertisedDevice* myDevice;
 BLERemoteCharacteristic* pRemoteChar_1;
 BLERemoteCharacteristic* pRemoteChar_2;
-
-// Callback function for Notify function
-static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
-                            uint8_t* pData,
-                            size_t length,
-                            bool isNotify) {
-  if(pBLERemoteCharacteristic->getUUID().toString() == charUUID_1.toString()) {
-
-    // convert received bytes to integer
-    uint32_t counter = pData[0];
-    for(int i = 1; i<length; i++) {
-      counter = counter | (pData[i] << i*8);
-    }
-
-    // print to Serial
-    Serial.print("Characteristic 1 (Notify) from server: ");
-    Serial.println(counter );  
-  }
-}
+BLERemoteCharacteristic* pRemoteChar_3;
 
 // Callback function that is called whenever a client is connected or disconnected
 class MyClientCallback : public BLEClientCallbacks {
@@ -82,10 +67,14 @@ bool connectToServer() {
   connected = true;
   pRemoteChar_1 = pRemoteService->getCharacteristic(charUUID_1);
   pRemoteChar_2 = pRemoteService->getCharacteristic(charUUID_2);
+  pRemoteChar_3 = pRemoteService->getCharacteristic(charUUID_3);
   if(connectCharacteristic(pRemoteService, pRemoteChar_1) == false)
     connected = false;
   else if(connectCharacteristic(pRemoteService, pRemoteChar_2) == false)
     connected = false;
+
+  else if(connectCharacteristic(pRemoteService, pRemoteChar_3) == false)
+    connected = false;  
 
   if(connected == false) {
     pClient-> disconnect();
@@ -104,10 +93,6 @@ bool connectCharacteristic(BLERemoteService* pRemoteService, BLERemoteCharacteri
     return false;
   }
   Serial.println(" - Found characteristic: " + String(l_BLERemoteChar->getUUID().toString().c_str()));
-
-  if(l_BLERemoteChar->canNotify())
-    l_BLERemoteChar->registerForNotify(notifyCallback);
-
   return true;
 }
 
@@ -132,6 +117,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
   Serial.begin(115200);
+  initializeLCD();
   Serial.println("Starting Arduino BLE Client application...");
   BLEDevice::init("");
 
@@ -163,10 +149,20 @@ void loop() {
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
   if (connected) {
-    std::string rxValue = pRemoteChar_2->readValue();
-    Serial.print("Characteristic 2 (readValue): ");
+    std::string rxValue = pRemoteChar_1->readValue();
+    Serial.print("Latitude (readValue): ");
     Serial.println(rxValue.c_str());
-    
+
+    std::string rxValue2 = pRemoteChar_2->readValue();
+    Serial.print("Altitude (readValue): ");
+    Serial.println(rxValue2.c_str());
+
+    std::string rxValue3 = pRemoteChar_3->readValue();
+    Serial.print("Longitude (readValue): ");
+    Serial.println(rxValue3.c_str());
+    Serial.println("-----------------------------------");
+
+    displayGPS(atof(rxValue.c_str()), atof(rxValue2.c_str()), atof(rxValue3.c_str()));
     
   }else if(doScan){
     BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
@@ -175,4 +171,73 @@ void loop() {
   // In this example "delay" is used to delay with one second. This is of course a very basic 
   // implementation to keep things simple. I recommend to use millis() for any production code
   delay(1000);
+}
+
+// Función para enviar comandos al LCD
+void lcdCommand(uint8_t command) {
+  Wire.beginTransmission(LCD_ADDRESS);
+  Wire.write((command & 0xF0) | BACKLIGHT); // Envía los 4 bits superiores
+  Wire.write((command & 0xF0) | En | BACKLIGHT); // Pulso de Enable
+  Wire.write((command & 0xF0) | BACKLIGHT);
+  
+  Wire.write(((command << 4) & 0xF0) | BACKLIGHT); // Envía los 4 bits inferiores
+  Wire.write(((command << 4) & 0xF0) | En | BACKLIGHT); // Pulso de Enable
+  Wire.write(((command << 4) & 0xF0) | BACKLIGHT);
+  Wire.endTransmission();
+  delayMicroseconds(50); // Tiempo necesario para la mayoría de los comandos
+}
+
+// Función para enviar datos (caracteres) al LCD
+void lcdWrite(uint8_t value) {
+  Wire.beginTransmission(LCD_ADDRESS);
+  Wire.write((value & 0xF0) | Rs | BACKLIGHT); // Envía los 4 bits superiores
+  Wire.write((value & 0xF0) | Rs | En | BACKLIGHT); // Pulso de Enable
+  Wire.write((value & 0xF0) | Rs | BACKLIGHT);
+  
+  Wire.write(((value << 4) & 0xF0) | Rs | BACKLIGHT); // Envía los 4 bits inferiores
+  Wire.write(((value << 4) & 0xF0) | Rs | En | BACKLIGHT); // Pulso de Enable
+  Wire.write(((value << 4) & 0xF0) | Rs | BACKLIGHT);
+  Wire.endTransmission();
+  delayMicroseconds(50); // Tiempo necesario para enviar datos
+}
+
+// Función para configurar la posición del cursor
+void lcdSetCursor(uint8_t col, uint8_t row) {
+  int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
+  lcdCommand(0x80 | (col + row_offsets[row]));
+}
+
+void initializeLCD() {
+  Wire.begin();  // Inicia la comunicación I2C
+
+  // Inicialización de la pantalla en modo de 4 bits
+  lcdCommand(0x03);
+  delayMicroseconds(4500); // Espera más de 4.1ms
+  lcdCommand(0x03);
+  delayMicroseconds(4500); // Espera más
+  lcdCommand(0x03);
+  delayMicroseconds(150);
+  lcdCommand(0x02); // Configuración a 4 bits
+  
+  lcdCommand(0x28); // Configuración de 4 bits, 2 líneas, fuente de 5x8
+  lcdCommand(0x0C); // Enciende la pantalla, cursor apagado
+  lcdCommand(0x06); // Modo de entrada
+  lcdCommand(0x01); // Limpia la pantalla
+  delay(2); // Este comando necesita al menos 2ms, no microsegundos
+}
+
+void displayGPS(float Lat, float Alt, float Long) {
+  lcdCommand(0x01);  // Clear display
+  lcdSetCursor(0, 0);  // Set cursor at the beginning of the first line
+  lcdWriteString("Latitude: ");
+  lcdWriteFloat(Lat);
+
+  lcdSetCursor(0, 1);  // Move cursor to the second line
+  lcdWriteString("Altitude: ");
+  lcdWriteFloat(Alt);
+
+  lcdSetCursor(0, 2);  // Move cursor to the third line
+  lcdWriteString("Longitude: ");
+  lcdWriteFloat(Long);
+
 }
