@@ -196,7 +196,7 @@ void loop() {
 
   char tempBuffer[32];
   char humidityBuffer[32];
-  char led1_E[32];
+  char led1_E[2];
   cliente = servidor.available();
   if (cliente) {
     Serial.println("Cliente conectado");
@@ -225,13 +225,7 @@ void loop() {
         humidity = readHumidity();
         sprintf(tempBuffer, "%.2f C", temperature);
         sprintf(humidityBuffer, "%.2f %%", humidity);
-        sprintf(led1_E, "%.2f", led1_encendido);
-
-        // Print en el monitor serial para depuración
-        Serial.print("Temperatura: ");
-        Serial.println(tempBuffer);
-        Serial.print("Humedad: ");
-        Serial.println(humidityBuffer);
+        sprintf(led1_E, "%.2f", hexa_led1);
 
         // Actualizar y notificar la temperatura
         pTemperatureCharacteristic->setValue((uint8_t*)tempBuffer, strlen(tempBuffer));
@@ -241,7 +235,7 @@ void loop() {
         pHumidityCharacteristic->setValue((uint8_t*)humidityBuffer, strlen(humidityBuffer));
         pHumidityCharacteristic->notify();
 
-        pLedStateCharacteristic->setValue((uint8_t*)(led1_E), strlen(led1_E));
+        pLedStateCharacteristic->setValue((uint8_t*)hexa_led1, strlen(hexa_led1));
         pLedStateCharacteristic->notify();
 
         delay(1000);
